@@ -1,0 +1,23 @@
+{
+  "name": "local-json",
+  "version": "0.0.1",
+  "description": "node.js module for reading json files.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kvonflotow/local-json.git"
+  },
+  "keywords": [
+    "json",
+    "reader",
+    "local",
+    "async",
+    "dynamic"
+  ],
+  "author": "kevin von flotow",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kvonflotow/local-json/issues"
+  },
+  "homepage": "https://github.com/kvonflotow/local-json"
+}
