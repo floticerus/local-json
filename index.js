@@ -1,5 +1,5 @@
 /*
-  local-json v0.0.2
+  local-json v0.0.3
   copyright 2014 - kevin von flotow
   MIT license
 */
@@ -116,7 +116,7 @@
 
                         if ( !that.opts.dynamic )
                         {
-                            return done( null, readData.call( this, require, filePath ) )
+                            return done( null, readData.call( that, require, filePath ) )
                         }
 
                         fs.readFile( filePath, function ( err, data )
@@ -126,7 +126,7 @@
                                     return done( err ) // error, file probably not found
                                 }
 
-                                done( null, readData.call( this, JSON.parse, data ) )
+                                done( null, readData.call( that, JSON.parse, data ) )
                             }
                         )
                     }
