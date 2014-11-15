@@ -15,6 +15,7 @@
     "dynamic"
   ],
   "dependencies": {
+    "deep-extend": "0.3.2",
     "nbqueue": "0.0.5"
   },
   "author": "kevin von flotow",
