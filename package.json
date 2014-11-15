@@ -1,6 +1,6 @@
 {
   "name": "local-json",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "node.js module for reading json files.",
   "main": "index.js",
   "repository": {
