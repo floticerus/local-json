@@ -1,7 +1,7 @@
 local-json
 ==========
 
-node.js module for reading json files. supports async and sync modes, along with dynamically updating json files without restarting the server. files are processed in order and merged together using [deep-extend](github.com/unclechu/node-deep-extend). [nbqueue](github.com/kvonflotow/nbqueue) is used to prevent too many files from being opened at once.
+node.js module for reading json files. supports async and sync modes, along with dynamically updating json files without restarting the server. files are processed in order and merged together using [deep-extend](//github.com/unclechu/node-deep-extend). [nbqueue](//github.com/kvonflotow/nbqueue) is used to prevent too many files from being opened at once.
 
 ### install
 
