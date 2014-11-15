@@ -1,5 +1,5 @@
 /*
-  local-json v0.0.5
+  local-json v0.0.6
   copyright 2014 - kevin von flotow
   MIT license
 */
@@ -15,9 +15,11 @@
 
         var chokidar = require( 'chokidar' )
 
+        var watchers = {}
+
         var mainQueue = new Queue( 5 )
 
-        var fileData = {}
+        //var fileData = {}
 
         function noop(){}
 
@@ -33,24 +35,37 @@
             // make sure it's a string
             file = file.toString()
 
+            if ( watchers.hasOwnProperty( file ) )
+            {
+                return // already exists
+            }
+
             // watch it
-            var watcher = chokidar.watch( file, { ignored:  /[\/\\]\./, persistent: true } )
+            watchers[ file ] = chokidar.watch( file, { ignored:  /[\/\\]\./, persistent: true } )
 
             var that = this
 
             // setup event listeners
-            watcher
+            watchers[ file ]
                 // listener for when the file has been removed
                 .on( 'unlink', function ( path )
                     {
-                        // delete cached file data if it exists
-                        if ( fileData.hasOwnProperty( path ) )
-                        {
-                            delete fileData[ path ]
-                        }
+                        that.opts.storageMethod.remove( path, function ( err )
+                            {
+                                if ( err )
+                                {
+                                    if ( that.opts.logging )
+                                    {
+                                        console.log( err )
+                                    }
 
-                        // remove the watcher
-                        watcher.close()
+                                    return 
+                                }
+
+                                // success
+
+                            }
+                        )
                     }
                 )
 
@@ -79,8 +94,25 @@
                                             return 
                                         }
 
+                                        var parsed = parseData.call( that, JSON.parse, fileContents )
+
                                         // cache new json
-                                        fileData[ path ] = parseData.call( that, JSON.parse, fileContents )
+                                        that.opts.storageMethod.set( path, parsed, function ( err )
+                                            {
+                                                if ( err )
+                                                {
+                                                    if ( that.opts.logging )
+                                                    {
+                                                        console.log( err )
+                                                    }
+
+                                                    return
+                                                }
+
+                                                // success
+                                                
+                                            }
+                                        )
                                     }
                                 )
                             }
@@ -112,6 +144,116 @@
         }
 
         /** @constructor */
+        function StorageMethod( getFn, setFn, removeFn )
+        {
+            // allow use without new
+            if ( !( this instanceof StorageMethod ) )
+            {
+                return new StorageMethod( getFn, setFn )
+            }
+
+            // default as noop to avoid errors
+            this.defineGet( getFn || noop )
+
+            // default as noop to avoid errors
+            this.defineSet( setFn || noop )
+
+            // default as noop to avoid errors
+            this.defineRemove( removeFn || noop )
+        }
+
+        // use wrapper function
+        StorageMethod.prototype.defineGet = function ( fn )
+        {
+            var that = this
+
+            this.get = function ( filePath, callback )
+            {
+                // fire the get function
+                fn.call( that, filePath, callback )
+            }
+        }
+
+        // use wrapper function
+        StorageMethod.prototype.defineSet = function ( fn )
+        {
+            var that = this
+
+            this.set = function ( filePath, data, callback )
+            {
+                // fire the set function
+                fn.call( that, filePath, data, callback )
+            }
+        }
+
+        // use wrapper function
+        StorageMethod.prototype.defineRemove = function ( fn )
+        {
+            var that = this
+
+            this.remove = function ( filePath, callback )
+            {
+                // unwatch file
+                if ( watchers.hasOwnProperty( filePath ) )
+                {
+                    // stop watching the file
+                    watchers[ filePath ].close()
+
+                    // remove reference
+                    delete watchers[ filePath ]
+                }
+
+                // fire the remove function
+                fn.call( that, filePath, callback )
+            }
+        }
+
+        StorageMethod.prototype.get = noop
+        StorageMethod.prototype.set = noop
+        StorageMethod.prototype.remove = noop
+
+        // default local in-memory storage method
+        var defaultStorageMethod = ( function ()
+            {
+                var storageMethod = new StorageMethod()
+
+                var fileData = {}
+
+                storageMethod.defineGet( function ( filePath, done )
+                    {
+                        if ( !fileData.hasOwnProperty( filePath ) )
+                        {
+                            return done( 'not found' )
+                        }
+
+                        done( null, fileData[ filePath ] )
+                    }
+                )
+
+                storageMethod.defineSet( function ( filePath, data, done )
+                    {
+                        fileData[ filePath ] = data
+
+                        done( null, data )
+                    }
+                )
+
+                storageMethod.defineRemove( function ( filePath, done )
+                    {
+                        if ( fileData.hasOwnProperty( filePath ) )
+                        {
+                            delete fileData[ filePath ]
+                        }
+
+                        done()
+                    }
+                )
+
+                return storageMethod
+            }
+        )();
+
+        /** @constructor */
         function LocalJson( opts )
         {
             // allow use without new
@@ -131,7 +273,9 @@
                     logging: true,
 
                     // maximum number of files allowed to be processed simultaneously in async mode
-                    queueLength: 5
+                    queueLength: 5,
+
+                    storageMethod: defaultStorageMethod
                 },
 
                 opts || {}
@@ -139,6 +283,9 @@
 
             this.data = {}
         }
+
+        // static reference to StorageMethod constructor
+        LocalJson.StorageMethod = StorageMethod;
 
         // use only sync methods
         LocalJson.prototype.getDataSync = function ( strings )
@@ -200,26 +347,36 @@
                                     return fileDone( null, parseData.call( that, require, filePath ) )
                                 }
 
-                                if ( fileData.hasOwnProperty( filePath ) )
-                                {
-                                    return fileDone( null, fileData[ filePath ] )
-                                }
-
-                                fs.readFile( filePath, function ( err, data )
+                                that.opts.storageMethod.get( filePath, function ( err, data )
                                     {
-                                        if ( err )
+                                        if ( !err && typeof data !== 'undefined' )
                                         {
-                                            return fileDone( err ) // error, file probably not found
+                                            return fileDone( null, data )
                                         }
 
-                                        var parsed = parseData.call( that, JSON.parse, data )
+                                        fs.readFile( filePath, function ( err, data )
+                                            {
+                                                if ( err )
+                                                {
+                                                    return fileDone( err ) // error, file probably not found
+                                                }
 
-                                        // reference cache and watch file
-                                        fileData[ filePath ] = parsed
+                                                var parsed = parseData.call( that, JSON.parse, data )
 
-                                        watchFile.call( that, filePath )
+                                                that.opts.storageMethod.set( filePath, parsed, function ( err )
+                                                    {
+                                                        if ( err )
+                                                        {
+                                                            return fileDone( err )
+                                                        }
 
-                                        fileDone( null, parsed )
+                                                        watchFile.call( that, filePath )
+
+                                                        fileDone( null, parsed )
+                                                    }
+                                                )
+                                            }
+                                        )
                                     }
                                 )
                             }
