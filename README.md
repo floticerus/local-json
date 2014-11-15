@@ -12,7 +12,7 @@ npm install local-json
 ### usage
 
 ```javascript
-var LocalJson = require( 'local-json )
+var LocalJson = require( 'local-json' )
 
 var reader = new LocalJson(
   // directory to read json files from
