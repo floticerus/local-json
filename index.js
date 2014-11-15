@@ -1,5 +1,5 @@
 /*
-  local-json v0.0.3
+  local-json v0.0.4
   copyright 2014 - kevin von flotow
   MIT license
 */
@@ -38,14 +38,20 @@
         }
 
         /** @constructor */
-        function JsonReader( opts )
+        function LocalJson( opts )
         {
+            // allow use without new
+            if ( !( this instanceof LocalJson ) )
+            {
+                return new LocalJson( opts )
+            }
+
             this.opts = deepExtend(
                 {
                     directory: __dirname,
 
                     // set true to enable updating json without restarting the server
-                    dynamic: false,
+                    dynamic: true,
 
                     // whether or not to send log messages
                     logging: true,
@@ -61,7 +67,7 @@
         }
 
         // use only sync methods
-        JsonReader.prototype.getDataSync = function ( strings )
+        LocalJson.prototype.getDataSync = function ( strings )
         {
             if ( !Array.isArray( strings ) )
             {
@@ -92,7 +98,7 @@
         }
 
         // use async methods when in dynamic mode
-        JsonReader.prototype.getData = function ( strings, callback )
+        LocalJson.prototype.getData = function ( strings, callback )
         {
             callback = callback || noop
 
@@ -150,6 +156,6 @@
             )
         }
 
-        module.exports = JsonReader
+        module.exports = LocalJson
     }
 )();
