@@ -1,5 +1,5 @@
 /*
-  local-json v0.0.1
+  local-json v0.0.2
   copyright 2014 - kevin von flotow
   MIT license
 */
@@ -42,6 +42,8 @@
         {
             this.opts = deepExtend(
                 {
+                    directory: __dirname,
+
                     // set true to enable updating json without restarting the server
                     dynamic: false,
 
@@ -72,7 +74,7 @@
             {
                 var str = strings[ i ].toString()
 
-                var filePath = path.join( __dirname, str + '.json' )
+                var filePath = path.join( this.opts.directory, str + '.json' )
 
                 if ( !this.opts.dynamic )
                 {
@@ -110,7 +112,7 @@
 
                 queue.add( function ( done )
                     {
-                        var filePath = path.join( __dirname, str + '.json' )
+                        var filePath = path.join( that.opts.directory, str + '.json' )
 
                         if ( !that.opts.dynamic )
                         {
@@ -134,7 +136,16 @@
             // finish up async queue
             queue.done( function ( err, data )
                 {
-                    callback( err, deepExtend.apply( null, data || [] ) )
+                    data = data || []
+
+                    var combined = {}
+
+                    if ( 0 !== data.length )
+                    {
+                        combined = deepExtend.apply( null, data || [] )
+                    }
+
+                    callback( err, combined )
                 }
             )
         }
