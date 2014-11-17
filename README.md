@@ -43,7 +43,7 @@ var reader = new LocalJson(
 )
 
 // async method
-reader.getJson( [ 'foo', 'bar' ], function ( err, data )
+reader.getData( [ 'foo', 'bar' ], function ( err, data )
   {
     if ( err ) return console.log( err )
     
@@ -52,7 +52,7 @@ reader.getJson( [ 'foo', 'bar' ], function ( err, data )
 )
 
 // sync method - data contains object consisting of merged json files
-var data = reader.getJsonSync( [ 'foo', 'bar' ] )
+var data = reader.getDataSync( [ 'foo', 'bar' ] )
 ```
 
 ### storage methods
