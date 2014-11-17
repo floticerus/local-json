@@ -34,7 +34,12 @@ var reader = new LocalJson(
   // storage method for getting and setting parsed json data
   // default uses standard javascript objects, and is not recommended
   // outside of testing/development.
-  storageMethod: LocalJson.StorageMethod.find( 'default' )
+  storageMethod: LocalJson.StorageMethod( 'default'
+    {
+      // pass whatever you want to a custom storage method
+      // default storage method has no options
+    }
+  )
 )
 
 // async method
@@ -59,39 +64,47 @@ the default storage method looks like this:
 ```javascript
 // setup default storage method
 // a new StorageMethod instance is passed to the function
-LocalJson.StorageMethod.define( 'default', function ( storageMethod )
-	{
-		var fileData = {}
+StorageMethod.define( 'default', function ( storageMethod )
+  {
+    // must return a function. options parameter is optional,
+    // and can be used for whatever you want.
+    return function ( options )
+    {
+      // custom options, not used in default storage method
+      // options = options || {}
 
-		storageMethod.get = function ( filePath, done )
-		{
-			if ( !fileData.hasOwnProperty( filePath ) )
-			{
-				return done( 'not found' )
-			}
+      var fileData = {}
 
-			done( null, fileData[ filePath ] )
-		}
+      storageMethod.get = function ( filePath, done )
+      {
+        if ( !fileData.hasOwnProperty( filePath ) )
+        {
+          return done( 'not found' )
+        }
 
-		storageMethod.set = function ( filePath, data, done )
-		{
-			fileData[ filePath ] = data
+        done( null, fileData[ filePath ] )
+      }
 
-			done( null, data )
-		}
+      storageMethod.set = function ( filePath, data, done )
+      {
+        fileData[ filePath ] = data
 
-		storageMethod.remove = function ( filePath, done )
-		{
-			if ( fileData.hasOwnProperty( filePath ) )
-			{
-				delete fileData[ filePath ]
-			}
+        done( null, data )
+      }
 
-			done()
-		}
+      storageMethod.remove = function ( filePath, done )
+      {
+        if ( fileData.hasOwnProperty( filePath ) )
+        {
+          delete fileData[ filePath ]
+        }
 
-		return storageMethod
-	}
+        done()
+      }
+
+      return storageMethod
+    }
+  }
 )
 ```
 
