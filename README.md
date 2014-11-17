@@ -18,7 +18,12 @@ npm install local-json
 ```javascript
 var LocalJson = require( 'local-json' )
 
+// default options are shown, everything is optional
 var reader = new LocalJson(
+  // maximum number of files allowed to be processed simultaneously in async mode
+  // raise if you're on a beastly server and need more performance
+  concurrency: 3,
+
   // working directory to read json files from
   directory: __dirname,
   
@@ -27,9 +32,6 @@ var reader = new LocalJson(
   
   // whether or not to log messages on json errors
   logging: true,
-  
-  // maximum number of files allowed to be processed simultaneously in async mode
-  queueLength: 5,
   
   // storage method for getting and setting parsed json data.
   // default uses standard javascript objects for cache, and is
