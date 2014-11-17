@@ -1,5 +1,5 @@
 /*
-  local-json v0.0.7
+  local-json v0.0.9
   copyright 2014 - kevin von flotow
   MIT license
 */
@@ -18,8 +18,6 @@
         var watchers = {}
 
         var mainQueue = new Queue( 5 )
-
-        //var fileData = {}
 
         var storageMethods = {}
 
@@ -270,6 +268,11 @@
 
                     var fileData = {}
 
+                    storageMethod.init = function ( done )
+                    {
+                        // init stuff could go here
+                    }
+
                     storageMethod.get = function ( filePath, done )
                     {
                         if ( !fileData.hasOwnProperty( filePath ) )
@@ -316,18 +319,28 @@
 
                 // pass defaults first
                 {
+                    // maximum number of files allowed to be processed simultaneously in async mode
+                    // raise if you're on a beastly server and need more performance
+                    concurrency: 3,
+
+                    // working directory to read json files from
                     directory: __dirname,
 
                     // set true to enable updating json without restarting the server
                     dynamic: true,
 
-                    // whether or not to send log messages
+                    // whether or not to execute internal log messages
                     logging: true,
 
-                    // maximum number of files allowed to be processed simultaneously in async mode
-                    queueLength: 5,
+                    // setting to true will enable recursive directory reading.
+                    // subfolders can be accessed using forward slashes: 'path/to/file'
+                    //
+                    // not implemented yet
+                    recursive: true,
 
-                    // call function to get default storage method
+                    // storage method for getting and setting parsed json data.
+                    // default uses standard javascript objects for cache, and is
+                    // generally not ideal outside of testing/development.
                     storageMethod: StorageMethod( 'default',
                         {
                             // storage method options
@@ -393,7 +406,7 @@
 
             mainQueue.add( function ( mainDone )
                 {
-                    var fileQueue = new Queue( that.opts.queueLength )
+                    var fileQueue = new Queue( that.opts.concurrency )
 
                     for ( var i = 0, l = strings.length; i < l; ++i )
                     {
