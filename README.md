@@ -1,7 +1,7 @@
 local-json
 ==========
 
-node.js module for reading json files. supports async and sync modes, along with dynamically updating json files without restarting the server.
+node.js module for reading json files. supports async and sync modes, along with dynamically updating and caching json files without restarting the server.
 
 - [deep-extend](//github.com/unclechu/node-deep-extend) is used to merge json after it is processed.
 - [nbqueue](//github.com/kvonflotow/nbqueue) is used to prevent too many files from being opened at once.
@@ -19,8 +19,8 @@ npm install local-json
 var LocalJson = require( 'local-json' )
 
 var reader = new LocalJson(
-  // directory to read json files from
-  directory: path.join( __dirname, 'json' ),
+  // working directory to read json files from
+  directory: __dirname,
   
   // set true to enable updating json without restarting the server
   dynamic: true,
@@ -31,9 +31,9 @@ var reader = new LocalJson(
   // maximum number of files allowed to be processed simultaneously in async mode
   queueLength: 5,
   
-  // storage method for getting and setting parsed json data
-  // default uses standard javascript objects, and is not recommended
-  // outside of testing/development.
+  // storage method for getting and setting parsed json data.
+  // default uses standard javascript objects for cache, and is
+  // generally not ideal outside of testing/development.
   storageMethod: LocalJson.StorageMethod( 'default'
     {
       // pass whatever you want to a custom storage method
@@ -42,8 +42,13 @@ var reader = new LocalJson(
   )
 )
 
-// async method
-reader.getData( [ 'foo', 'bar' ], function ( err, data )
+// merge base.json, page.json, and blog.json
+// .json extension is optional
+
+// async method. if dynamic, parses json and stores the result according to the storage method.
+// non-dynamic requests use require, which has built-in caching. storage methods may be extended
+// to run when dynamic is disabled in the future, if needed.
+reader.getData( [ 'base', 'page', 'blog' ], function ( err, data )
   {
     if ( err ) return console.log( err )
     
@@ -51,8 +56,10 @@ reader.getData( [ 'foo', 'bar' ], function ( err, data )
   }
 )
 
-// sync method - data contains object consisting of merged json files
-var data = reader.getDataSync( [ 'foo', 'bar' ] )
+// sync method - data contains object consisting of merged json files.
+// getDataSync does NOT utilize storage methods or caching.
+// recommended only for quick prototyping and tests
+var data = reader.getDataSync( [ 'base', 'page', 'blog' ] )
 ```
 
 ### storage methods
