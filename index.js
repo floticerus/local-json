@@ -1,5 +1,5 @@
 /*
-  local-json v0.0.6
+  local-json v0.0.7
   copyright 2014 - kevin von flotow
   MIT license
 */
@@ -20,6 +20,10 @@
         var mainQueue = new Queue( 5 )
 
         //var fileData = {}
+
+        var storageMethods = {}
+
+        var jsonRegex = /\.json$/
 
         function noop(){}
 
@@ -149,109 +153,138 @@
             // allow use without new
             if ( !( this instanceof StorageMethod ) )
             {
-                return new StorageMethod( getFn, setFn )
+                return new StorageMethod( getFn, setFn, removeFn )
             }
 
-            // default as noop to avoid errors
-            this.defineGet( getFn || noop )
-
-            // default as noop to avoid errors
-            this.defineSet( setFn || noop )
-
-            // default as noop to avoid errors
-            this.defineRemove( removeFn || noop )
-        }
-
-        // use wrapper function
-        StorageMethod.prototype.defineGet = function ( fn )
-        {
             var that = this
 
-            this.get = function ( filePath, callback )
-            {
-                // fire the get function
-                fn.call( that, filePath, callback )
-            }
-        }
+            var getFn, setFn, removeFn = noop
 
-        // use wrapper function
-        StorageMethod.prototype.defineSet = function ( fn )
-        {
-            var that = this
-
-            this.set = function ( filePath, data, callback )
-            {
-                // fire the set function
-                fn.call( that, filePath, data, callback )
-            }
-        }
-
-        // use wrapper function
-        StorageMethod.prototype.defineRemove = function ( fn )
-        {
-            var that = this
-
-            this.remove = function ( filePath, callback )
-            {
-                // unwatch file
-                if ( watchers.hasOwnProperty( filePath ) )
+            Object.defineProperty( this, 'get',
                 {
-                    // stop watching the file
-                    watchers[ filePath ].close()
+                    get: function ()
+                    {
+                        return getFn
+                    },
 
-                    // remove reference
-                    delete watchers[ filePath ]
+                    set: function ( fn )
+                    {
+                        getFn = function ( filePath, callback )
+                        {
+                            fn.call( that, filePath, callback )
+                        }
+                    }
                 }
+            )
 
-                // fire the remove function
-                fn.call( that, filePath, callback )
+            Object.defineProperty( this, 'set',
+                {
+                    get: function ()
+                    {
+                        return setFn
+                    },
+
+                    set: function ( fn )
+                    {
+                        setFn = function ( filePath, data, callback )
+                        {
+                            fn.call( that, filePath, data, callback )
+                        }
+                    }
+                }
+            )
+
+            Object.defineProperty( this, 'remove',
+                {
+                    get: function ()
+                    {
+                        return removeFn
+                    },
+
+                    set: function ( fn )
+                    {
+                        removeFn = function ( filePath, callback )
+                        {
+                            // unwatch file
+                            if ( watchers.hasOwnProperty( filePath ) )
+                            {
+                                // stop watching the file
+                                watchers[ filePath ].close()
+
+                                // remove reference
+                                delete watchers[ filePath ]
+                            }
+
+                            // fire the remove function
+                            fn.call( that, filePath, callback )
+                        }
+                    }
+                }
+            )
+
+            this.get = getFn || noop
+
+            this.set = setFn || noop
+
+            this.remove = setFn || noop
+        }
+
+        // name them something other than get/set
+        StorageMethod.define = function ( str, fn )
+        {
+            // pass new StorageMethod instance to definition function
+            storageMethods[ str ] = fn( new StorageMethod() )
+        }
+
+        StorageMethod.find = function ( str )
+        {
+            return typeof str !== 'undefined' && storageMethods.hasOwnProperty( str ) ? storageMethods[ str ] : null
+        }
+
+        StorageMethod.remove = function ( str )
+        {
+            if ( StorageMethod.get( str ) )
+            {
+                delete StorageMethod[ str ]
             }
         }
 
-        StorageMethod.prototype.get = noop
-        StorageMethod.prototype.set = noop
-        StorageMethod.prototype.remove = noop
-
-        // default local in-memory storage method
-        var defaultStorageMethod = ( function ()
+        // setup default storage method
+        // pass whatever you want to the function
+        StorageMethod.define( 'default', function ( storageMethod )
             {
-                var storageMethod = new StorageMethod()
-
                 var fileData = {}
 
-                storageMethod.defineGet( function ( filePath, done )
+                storageMethod.get = function ( filePath, done )
+                {
+                    if ( !fileData.hasOwnProperty( filePath ) )
                     {
-                        if ( !fileData.hasOwnProperty( filePath ) )
-                        {
-                            return done( 'not found' )
-                        }
-
-                        done( null, fileData[ filePath ] )
+                        return done( 'not found' )
                     }
-                )
 
-                storageMethod.defineSet( function ( filePath, data, done )
+                    done( null, fileData[ filePath ] )
+                }
+
+                storageMethod.set = function ( filePath, data, done )
+                {
+                    fileData[ filePath ] = data
+
+                    done( null, data )
+                }
+
+                storageMethod.remove = function ( filePath, done )
+                {
+                    if ( fileData.hasOwnProperty( filePath ) )
                     {
-                        fileData[ filePath ] = data
-
-                        done( null, data )
+                        delete fileData[ filePath ]
                     }
-                )
 
-                storageMethod.defineRemove( function ( filePath, done )
-                    {
-                        if ( fileData.hasOwnProperty( filePath ) )
-                        {
-                            delete fileData[ filePath ]
-                        }
-
-                        done()
-                    }
-                )
+                    done()
+                }
 
                 return storageMethod
             }
-        )();
+        )
 
         /** @constructor */
         function LocalJson( opts )
@@ -262,7 +295,10 @@
                 return new LocalJson( opts )
             }
 
+            // use deep-extend to merge options with defaults
             this.opts = deepExtend(
+
+                // pass defaults first
                 {
                     directory: __dirname,
 
@@ -275,13 +311,13 @@
                     // maximum number of files allowed to be processed simultaneously in async mode
                     queueLength: 5,
 
-                    storageMethod: defaultStorageMethod
+                    // call function to get default storage method
+                    storageMethod: StorageMethod.find( 'default' )
                 },
 
+                // pass custom options for this instance
                 opts || {}
             )
-
-            this.data = {}
         }
 
         // static reference to StorageMethod constructor
@@ -301,7 +337,11 @@
             {
                 var str = strings[ i ].toString()
 
-                var filePath = path.join( this.opts.directory, str + '.json' )
+                // append .json if necessary
+                str = jsonRegex.test( str ) ? str : str + '.json'
+
+                // use path.join() to get full path to file
+                var filePath = path.join( this.opts.directory, str )
 
                 if ( !this.opts.dynamic )
                 {
@@ -338,9 +378,13 @@
                     {
                         var str = strings[ i ].toString()
 
+                        // append .json if necessary
+                        str = jsonRegex.test( str ) ? str : str + '.json'
+
                         fileQueue.add( function ( fileDone )
                             {
-                                var filePath = path.join( that.opts.directory, str + '.json' )
+                                // use path.join() to get full path to file
+                                var filePath = path.join( that.opts.directory, str )
 
                                 if ( !that.opts.dynamic )
                                 {
