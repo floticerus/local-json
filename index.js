@@ -250,7 +250,7 @@
         }
 
         // setup default storage method
-        // pass whatever you want to the function
+        // a new StorageMethod instance is passed to the function
         StorageMethod.define( 'default', function ( storageMethod )
             {
                 var fileData = {}
