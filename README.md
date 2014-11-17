@@ -1,7 +1,11 @@
 local-json
 ==========
 
-node.js module for reading json files. supports async and sync modes, along with dynamically updating json files without restarting the server. files are processed in order and merged together using [deep-extend](//github.com/unclechu/node-deep-extend). [nbqueue](//github.com/kvonflotow/nbqueue) is used to prevent too many files from being opened at once.
+node.js module for reading json files. supports async and sync modes, along with dynamically updating json files without restarting the server.
+
+- [deep-extend](//github.com/unclechu/node-deep-extend) is used to merge json after it is processed.
+- [nbqueue](//github.com/kvonflotow/nbqueue) is used to prevent too many files from being opened at once.
+- [chokidar](//github.com/paulmillr/chokidar) is used for watching files and dynamically updating the server as they are changed.
 
 ### install
 
@@ -9,7 +13,7 @@ node.js module for reading json files. supports async and sync modes, along with
 npm install local-json
 ```
 
-### usage
+### typical usage
 
 ```javascript
 var LocalJson = require( 'local-json' )
@@ -25,7 +29,12 @@ var reader = new LocalJson(
   logging: true,
   
   // maximum number of files allowed to be processed simultaneously in async mode
-  queueLength: 5
+  queueLength: 5,
+  
+  // storage method for getting and setting parsed json data
+  // default uses standard javascript objects, and is not recommended
+  // outside of testing/development.
+  storageMethod: LocalJson.StorageMethod.find( 'default' )
 )
 
 // async method
@@ -39,6 +48,51 @@ reader.getJson( [ 'foo', 'bar' ], function ( err, data )
 
 // sync method - data contains object consisting of merged json files
 var data = reader.getJsonSync( [ 'foo', 'bar' ] )
+```
+
+### storage methods
+
+local-json provides a way of using your own methods for getting/setting the parsed json data. any type of data storage system can be used. get, set, and remove functions must all be defined or it will not work properly.
+
+the default storage method looks like this:
+
+```javascript
+// setup default storage method
+// a new StorageMethod instance is passed to the function
+LocalJson.StorageMethod.define( 'default', function ( storageMethod )
+	{
+		var fileData = {}
+
+		storageMethod.get = function ( filePath, done )
+		{
+			if ( !fileData.hasOwnProperty( filePath ) )
+			{
+				return done( 'not found' )
+			}
+
+			done( null, fileData[ filePath ] )
+		}
+
+		storageMethod.set = function ( filePath, data, done )
+		{
+			fileData[ filePath ] = data
+
+			done( null, data )
+		}
+
+		storageMethod.remove = function ( filePath, done )
+		{
+			if ( fileData.hasOwnProperty( filePath ) )
+			{
+				delete fileData[ filePath ]
+			}
+
+			done()
+		}
+
+		return storageMethod
+	}
+)
 ```
 
 ### license
