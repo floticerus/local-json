@@ -153,6 +153,14 @@
             // allow use without new
             if ( !( this instanceof StorageMethod ) )
             {
+                if ( 'string' === typeof getFn )
+                {
+                    // map to StorageMethod.find()
+                    // getFn is method name, setFn is options in this case
+                    return StorageMethod.find( getFn, setFn )
+                }
+
+                // return new StorageMethod instance
                 return new StorageMethod( getFn, setFn, removeFn )
             }
 
@@ -236,9 +244,9 @@
             storageMethods[ str ] = fn( new StorageMethod() )
         }
 
-        StorageMethod.find = function ( str )
+        StorageMethod.find = function ( str, options )
         {
-            return typeof str !== 'undefined' && storageMethods.hasOwnProperty( str ) ? storageMethods[ str ] : null
+            return typeof str !== 'undefined' && storageMethods.hasOwnProperty( str ) ? storageMethods[ str ]( options ) : null
         }
 
         StorageMethod.remove = function ( str )
@@ -253,36 +261,44 @@
         // a new StorageMethod instance is passed to the function
         StorageMethod.define( 'default', function ( storageMethod )
             {
-                var fileData = {}
-
-                storageMethod.get = function ( filePath, done )
+                // must return a function. options parameter is optional,
+                // and can be used for whatever you want.
+                return function ( options )
                 {
-                    if ( !fileData.hasOwnProperty( filePath ) )
+                    // custom options, not used in default storage method
+                    //options = options || {}
+
+                    var fileData = {}
+
+                    storageMethod.get = function ( filePath, done )
                     {
-                        return done( 'not found' )
+                        if ( !fileData.hasOwnProperty( filePath ) )
+                        {
+                            return done( 'not found' )
+                        }
+
+                        done( null, fileData[ filePath ] )
                     }
 
-                    done( null, fileData[ filePath ] )
-                }
-
-                storageMethod.set = function ( filePath, data, done )
-                {
-                    fileData[ filePath ] = data
-
-                    done( null, data )
-                }
-
-                storageMethod.remove = function ( filePath, done )
-                {
-                    if ( fileData.hasOwnProperty( filePath ) )
+                    storageMethod.set = function ( filePath, data, done )
                     {
-                        delete fileData[ filePath ]
+                        fileData[ filePath ] = data
+
+                        done( null, data )
                     }
 
-                    done()
-                }
+                    storageMethod.remove = function ( filePath, done )
+                    {
+                        if ( fileData.hasOwnProperty( filePath ) )
+                        {
+                            delete fileData[ filePath ]
+                        }
 
-                return storageMethod
+                        done()
+                    }
+
+                    return storageMethod
+                }
             }
         )
 
@@ -312,7 +328,12 @@
                     queueLength: 5,
 
                     // call function to get default storage method
-                    storageMethod: StorageMethod.find( 'default' )
+                    storageMethod: StorageMethod( 'default',
+                        {
+                            // storage method options
+                            // none for default
+                        }
+                    )
                 },
 
                 // pass custom options for this instance
