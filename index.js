@@ -311,45 +311,30 @@
                 return new LocalJson( opts )
             }
 
-            // use deep-extend to merge options with defaults
-            this.opts = deepExtend(
+            this.opts = {}
 
-                // pass defaults first
-                {
-                    // maximum number of files allowed to be processed simultaneously in async mode
-                    // raise if you're on a beastly server and need more performance
-                    concurrency: 3,
+            // maximum number of files allowed to be processed simultaneously in async mode
+            // raise if you're on a beastly server and need more performance
+            this.opts.concurrency = opts.concurrency || 3
 
-                    // working directory to read json files from
-                    directory: __dirname,
+            // working directory to read json files from
+            this.opts.directory = opts.directory || __dirname
 
-                    // set true to enable updating json without restarting the server
-                    dynamic: true,
+            // set true to enable updating json without restarting the server
+            this.opts.dynamic = typeof opts.dynamic !== 'undefined' ? !!opts.dynamic : true
 
-                    // whether or not to execute internal log messages
-                    logging: true,
+            // whether or not to execute internal log messages
+            this.opts.logging = typeof opts.logging !== 'undefined' ? !!opts.logging : true
 
-                    // setting to true will enable recursive directory reading.
-                    // subfolders can be accessed using forward slashes: 'path/to/file'
-                    //
-                    // not implemented yet
-                    recursive: true
+            // setting to true will enable recursive directory reading.
+            // subfolders can be accessed using forward slashes: 'path/to/file'
+            //
+            // not implemented yet
+            this.opts.recursive = typeof opts.recursive !== 'undefined' ? !!opts.recursive : true
 
-                    // storage method for getting and setting parsed json data.
-                    // default uses standard javascript objects for cache, and is
-                    // generally not ideal outside of testing/development.
-                    /* storageMethod: StorageMethod( 'default',
-                        {
-                            // storage method options
-                            // none for default
-                        }
-                    ) */
-                },
-
-                // pass custom options for this instance
-                opts || {}
-            )
-
+            // storage method for getting and setting parsed json data.
+            // default uses standard javascript objects for cache, and is
+            // generally not ideal outside of testing/development.
             this.opts.storageMethod = opts.storageMethod || StorageMethod( 'default', {} )
 
             this.opts.storageMethod.init()
