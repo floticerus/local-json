@@ -3,9 +3,9 @@ local-json
 
 node.js module for reading json files. supports async and sync modes, along with dynamically updating and caching json files without restarting the server.
 
-- [deep-extend](//github.com/unclechu/node-deep-extend) is used to merge json after it is processed.
-- [nbqueue](//github.com/kvonflotow/nbqueue) is used to prevent too many files from being opened at once.
-- [chokidar](//github.com/paulmillr/chokidar) is used for watching files and dynamically updating the server as they are changed.
+- [deep-extend](https://github.com/unclechu/node-deep-extend) is used to merge json after it is processed.
+- [nbqueue](https://github.com/kvonflotow/nbqueue) is used to prevent too many files from being opened at once.
+- [chokidar](https://github.com/paulmillr/chokidar) is used for watching files and dynamically updating the server as they are changed.
 
 ### install
 
@@ -67,6 +67,10 @@ var data = reader.getDataSync( [ 'base', 'page', 'blog' ] )
 ### storage methods
 
 local-json provides a way of using your own methods for getting/setting the parsed json data. any type of data storage system can be used. get, set, and remove functions must all be defined or it will not work properly.
+
+currently available storage methods:
+ - default - plain javascript object
+ - [local-json-redis](https://github.com/kvonflotow/local-json-redis)
 
 the default storage method looks like this:
 
