@@ -1,5 +1,5 @@
 /*
-  local-json v0.0.9
+  local-json v0.0.10
   copyright 2014 - kevin von flotow
   MIT license
 */
@@ -65,7 +65,7 @@
                                 }
 
                                 // success
-
+                                
                             }
                         )
                     }
@@ -96,7 +96,7 @@
                                             return 
                                         }
 
-                                        var parsed = parseData.call( that, JSON.parse, fileContents )
+                                        var parsed = LocalJson.TryParse.call( that, JSON.parse, fileContents )
 
                                         // cache new json
                                         that.opts.storageMethod.set( path, parsed, function ( err )
@@ -123,28 +123,6 @@
                 )
         }
 
-        function parseData( fn, fileContents )
-        {
-            var add = {}
-
-            // don't crash the server if the json is invalid
-            try
-            {
-                add = fn( fileContents )
-            }
-
-            catch ( e )
-            {
-                if ( this.opts.logging )
-                {
-                    // bad json or not found
-                    console.log( 'json error', e )
-                }
-            }
-
-            return add
-        }
-
         /** @constructor */
         function StorageMethod( getFn, setFn, removeFn )
         {
@@ -164,7 +142,24 @@
 
             var that = this
 
-            var getFn, setFn, removeFn = noop
+            var initFn, getFn, setFn, removeFn = noop
+
+            Object.defineProperty( this, 'init',
+                {
+                    get: function ()
+                    {
+                        return initFn
+                    },
+
+                    set: function( fn )
+                    {
+                        initFn = function ()
+                        {
+                            fn.call( that )
+                        }
+                    }
+                }
+            )
 
             Object.defineProperty( this, 'get',
                 {
@@ -240,6 +235,8 @@
         {
             // pass new StorageMethod instance to definition function
             storageMethods[ str ] = fn( new StorageMethod() )
+
+            return storageMethods[ str ]
         }
 
         StorageMethod.find = function ( str, options )
@@ -336,26 +333,52 @@
                     // subfolders can be accessed using forward slashes: 'path/to/file'
                     //
                     // not implemented yet
-                    recursive: true,
+                    recursive: true
 
                     // storage method for getting and setting parsed json data.
                     // default uses standard javascript objects for cache, and is
                     // generally not ideal outside of testing/development.
-                    storageMethod: StorageMethod( 'default',
+                    /* storageMethod: StorageMethod( 'default',
                         {
                             // storage method options
                             // none for default
                         }
-                    )
+                    ) */
                 },
 
                 // pass custom options for this instance
                 opts || {}
             )
+
+            this.opts.storageMethod = opts.storageMethod || StorageMethod( 'default', {} )
+
+            this.opts.storageMethod.init()
         }
 
         // static reference to StorageMethod constructor
-        LocalJson.StorageMethod = StorageMethod;
+        LocalJson.StorageMethod = StorageMethod
+
+        LocalJson.TryParse = function ( fn, data )
+        {
+            var add = {}
+
+            // don't crash the server if the json is invalid
+            try
+            {
+                add = fn( data )
+            }
+
+            catch ( e )
+            {
+                if ( this.opts && this.opts.logging )
+                {
+                    // bad json or not found
+                    console.log( 'json error', e )
+                }
+            }
+
+            return add
+        }
 
         // use only sync methods
         LocalJson.prototype.getDataSync = function ( strings )
@@ -379,14 +402,14 @@
 
                 if ( !this.opts.dynamic )
                 {
-                    file.push( parseData.call( this, require, filePath ) )
+                    file.push( LocalJson.TryParse.call( this, require, filePath ) )
 
                     continue
                 }
 
                 var data = fs.readFileSync( filePath, { encoding: 'utf8' } )
 
-                files.push( parseData.call( this, JSON.parse, data ) )
+                files.push( LocalJson.TryParse.call( this, JSON.parse, data ) )
             }
 
             return deepExtend.apply( null, files )
@@ -422,12 +445,12 @@
 
                                 if ( !that.opts.dynamic )
                                 {
-                                    return fileDone( null, parseData.call( that, require, filePath ) )
+                                    return fileDone( null, LocalJson.TryParse.call( that, require, filePath ) )
                                 }
 
                                 that.opts.storageMethod.get( filePath, function ( err, data )
                                     {
-                                        if ( !err && typeof data !== 'undefined' )
+                                        if ( !err && data )
                                         {
                                             return fileDone( null, data )
                                         }
@@ -439,7 +462,7 @@
                                                     return fileDone( err ) // error, file probably not found
                                                 }
 
-                                                var parsed = parseData.call( that, JSON.parse, data )
+                                                var parsed = LocalJson.TryParse.call( that, JSON.parse, data )
 
                                                 that.opts.storageMethod.set( filePath, parsed, function ( err )
                                                     {
