@@ -21,7 +21,7 @@
 
         var storageMethods = {}
 
-        var jsonRegex = /.+?\.json$/
+        var jsonRegex = /^.+?\.json$/
 
         function noop(){}
 
