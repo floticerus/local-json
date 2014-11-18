@@ -71,6 +71,7 @@ local-json provides a way of using your own methods for getting/setting the pars
 currently available storage methods:
  - default - plain javascript object
  - [local-json-redis](https://github.com/kvonflotow/local-json-redis)
+ - [local-json-mongodb](https://github.com/kvonflotow/local-json-mongodb)
 
 the default storage method looks like this:
 
